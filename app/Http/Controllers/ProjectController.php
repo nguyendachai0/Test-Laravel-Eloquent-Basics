@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use App\Models\Stat;
+use App\Observers\ProjectObserver;
 use Illuminate\Http\Request;
 
 class ProjectController extends Controller
@@ -11,9 +12,9 @@ class ProjectController extends Controller
     public function store(Request $request)
     {
         // TASK: Currently this statement fails. Fix the underlying issue.
-        Project::create([
-            'name' => $request->name
-        ]);
+        $project = new Project();
+        $project->name = $request->name;
+        $project->save();
 
         return redirect('/')->with('success', 'Project created');
     }
@@ -22,6 +23,8 @@ class ProjectController extends Controller
     {
         // TASK: Transform this SQL query into Eloquent
         // update projects
+        $projects = Project::where('name', $request->old_name)->update(['name' =>  $request->new_name]);
+
         //   set name = $request->new_name
         //   where name = $request->old_name
 
@@ -35,7 +38,7 @@ class ProjectController extends Controller
         Project::destroy($projectId);
 
         // TASK: change this Eloquent statement to include the soft-deletes records
-        $projects = Project::all();
+        $projects = Project::all()->add(('soft-deletes'));
 
         return view('projects.index', compact('projects'));
     }
@@ -45,10 +48,10 @@ class ProjectController extends Controller
         // TASK: on creating a new project, create an Observer event to run SQL
         //   update stats set projects_count = projects_count + 1
         $project = new Project();
+        Project::observe(ProjectObserver::class);
         $project->name = $request->name;
         $project->save();
 
         return redirect('/')->with('success', 'Project created');
     }
-
 }
